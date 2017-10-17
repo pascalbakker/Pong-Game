@@ -25,7 +25,7 @@ public class Pong extends Application{
 	//Game variables
 	private boolean start = false;
 	private int player1Score = 0;
-	private int player1Special = 1;
+	private int player1Special = 2;
 	private int player2Special = 0;
 	private int player2Score = 0;
 	private int sum = 1;
@@ -34,6 +34,10 @@ public class Pong extends Application{
 	private static final int BOARD_HEIGHT = 100;
 	private static final int BOARD_WIDTH = 15;
 	private static final int WALL_WIDTH = 10;
+	private int wallWidth = 0;
+	private boolean wallIsActive = false;
+	private int wallHits = 0;
+	private int wallX;
 	//Ball variables
 	//Ball speed
 	private int ballSpeedY = -1;
@@ -42,7 +46,8 @@ public class Pong extends Application{
 	private int ballX = HEIGHT/2;
 	private int ballY = HEIGHT/2;
 	
-
+	private boolean specialLine = false;
+	private boolean turn = true;
 	
 	//Player 1 position
 	private double player1XPos = 0;
@@ -68,7 +73,8 @@ public class Pong extends Application{
                     case W: player2YPos -=20; break;
                     case S: player2YPos +=20; break;
                     case ENTER: start = true; break;
-                    case SPACE: special(); break;
+                    case SPACE: special(1); break;
+                    case E: special(0);
                 }
                 if(player1YPos<WALL_WIDTH)
                 	player1YPos=WALL_WIDTH;
@@ -89,20 +95,50 @@ public class Pong extends Application{
 		t.play();	
 	}
 	
-	private void special(){
-		switch(player1Special){
+	private void special(int player){
+		int playerSpecial = player==1 ? player1Special: player2Special;
+		switch(playerSpecial){
 			case 0: return; 
 			case 1: boomerangBall();
 			break;
-			case 2: buildWall();
+			case 2: initializeWall(player);
 			break;
 			case 3: speedBoost();
 			break;
 		}
-		player1Special=0;
+		if (player==1)
+			player1Special = 0;
+		else
+			player2Special = 0;
 	}
 	
-	private void buildWall(){}
+	private void initializeWall(int player){
+		if(player==1)
+			wallX = (int)(WIDTH*.6);
+		else
+			wallX = (int)(WIDTH*.4);
+		wallIsActive = true;
+		wallHits = 3;
+	}
+	
+	private void buildWall(GraphicsContext gc){
+		if(wallIsActive&&ballX>=wallX-wallWidth&&ballX<=wallX+wallWidth){
+			wallHits--;
+			ballSpeedX *=-1;
+		}
+		if(wallHits==3)
+			wallWidth = 20;
+		else if(wallHits==2)
+			wallWidth = 10;
+		else if(wallHits==1)
+			wallWidth = 5;
+		else{
+			wallWidth = 0;
+			wallIsActive = false;
+		}	
+	}
+	
+	
 	private void speedBoost(){
 		ballX+=ballSpeedX;
 		ballY+=ballSpeedY;
@@ -114,6 +150,7 @@ public class Pong extends Application{
 	
 	//Every 10 ms, this function will run
 	private void run(GraphicsContext gc) {
+
 		gc.setFill(Color.WHITE);
 		gc.fillRect(0, 0, WIDTH, HEIGHT);
 		gc.setFill(Color.BLACK);
@@ -135,19 +172,52 @@ public class Pong extends Application{
 		gc.fillOval(ballX, ballY, 15, 15);
 		
 		//If hits a wall, change direction
-		if(ballY>=HEIGHT-WALL_WIDTH-15||ballY<=WALL_WIDTH)
-			ballSpeedY *=-1;
+
 		//If ball goes past player, then give opponent a point
 		if(ifScore()) return;
 		//What to do if it player's board
 		//Player 1 Board
-		ifHitsBoard();
-		
+		hitDetection(gc);
+		if(specialLine){
+			gc.setFill(Color.PURPLE);
+			gc.fillRect(WIDTH/2, WALL_WIDTH, 5, HEIGHT-WALL_WIDTH);
+		}
+		if(wallIsActive){
+			gc.setFill(Color.YELLOW);
+			gc.fillRect(wallX, WALL_WIDTH, wallWidth, HEIGHT-WALL_WIDTH);
+
+		}
 
 		//Display player boards
+		gc.setFill(Color.WHITE);
 		gc.fillRect(player1XPos, player1YPos, BOARD_WIDTH, BOARD_HEIGHT);
 		gc.fillRect(player2XPos, player2YPos, BOARD_WIDTH, BOARD_HEIGHT);
 
+	}
+	
+	
+	private void hitDetection(GraphicsContext gc){
+		//If hits wall
+		if(ballY>=HEIGHT-WALL_WIDTH-15||ballY<=WALL_WIDTH)
+			ballSpeedY *=-1;
+		//If hits board
+		ifHitsBoard(gc);
+		ifHitsSpecialBoard(gc);
+		buildWall(gc);
+	}
+	
+	private void ifHitsSpecialBoard(GraphicsContext gc){
+		if(specialLine&&ballX==WIDTH/2){
+			Random rn = new Random();
+			int rand = rn.nextInt(3) + 1;
+			if(turn)
+				player1Special = rand;
+			else
+				player2Special = rand;
+			
+			specialLine = false;
+		}
+			
 	}
 	
 	private boolean ifScore(){
@@ -168,21 +238,35 @@ public class Pong extends Application{
 		return false;
 	}
 	
-	private void ifHitsBoard(){
+	private void ifHitsBoard(GraphicsContext gc){
 		if((ballX < BOARD_WIDTH)&&(ballY>=player1YPos&&ballY<=player1YPos+BOARD_HEIGHT)){
 			ballSpeedY += -1;
 			ballSpeedX += -1;
 			ballSpeedY *= -1;
 			ballSpeedX *= -1;
-			sum++;
+			if(turn)
+				sum++;
+			turn = false;
+			Random rn = new Random();
+			int rand = rn.nextInt(5) + 1;
+			if(rand == 1)
+				specialLine= true;
 		}
 		else if((ballX>WIDTH-BOARD_WIDTH-15)&&(ballY>=player2YPos&&ballY<=player2YPos+BOARD_HEIGHT)){
 			ballSpeedY += 1;
 			ballSpeedX += 1;
 			ballSpeedY *= -1;
 			ballSpeedX *= -1;
-			sum++;
+			if(!turn)
+				sum++;
+			turn = true;
+			Random rn = new Random();
+			int rand = rn.nextInt(5) + 1;
+			if(rand == 1)
+				specialLine= true;
 		}
+
+			
 	}
 	
 	private void resetBall(){
