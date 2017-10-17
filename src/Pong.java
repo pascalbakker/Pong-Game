@@ -25,7 +25,10 @@ public class Pong extends Application{
 	//Game variables
 	private boolean start = false;
 	private int player1Score = 0;
+	private int player1Special = 1;
+	private int player2Special = 0;
 	private int player2Score = 0;
+	private int sum = 1;
 	
 	//board width and height
 	private static final int BOARD_HEIGHT = 100;
@@ -65,6 +68,7 @@ public class Pong extends Application{
                     case W: player2YPos -=20; break;
                     case S: player2YPos +=20; break;
                     case ENTER: start = true; break;
+                    case SPACE: special(); break;
                 }
                 if(player1YPos<WALL_WIDTH)
                 	player1YPos=WALL_WIDTH;
@@ -85,6 +89,29 @@ public class Pong extends Application{
 		t.play();	
 	}
 	
+	private void special(){
+		switch(player1Special){
+			case 0: return; 
+			case 1: boomerangBall();
+			break;
+			case 2: buildWall();
+			break;
+			case 3: speedBoost();
+			break;
+		}
+		player1Special=0;
+	}
+	
+	private void buildWall(){}
+	private void speedBoost(){
+		ballX+=ballSpeedX;
+		ballY+=ballSpeedY;
+		sum++;
+	}
+	private void boomerangBall(){
+		ballSpeedX *=-1;
+	}
+	
 	//Every 10 ms, this function will run
 	private void run(GraphicsContext gc) {
 		gc.setFill(Color.WHITE);
@@ -100,6 +127,7 @@ public class Pong extends Application{
 			gc.fillText("Pres ENTER TO BEGIN", WIDTH/2, 200);
 			return;
 		}
+		
 		//Change ball position
 		ballX+=ballSpeedX;
 		ballY+=ballSpeedY;
@@ -113,18 +141,7 @@ public class Pong extends Application{
 		if(ifScore()) return;
 		//What to do if it player's board
 		//Player 1 Board
-		if((ballX < BOARD_WIDTH)&&(ballY>=player1YPos&&ballY<=player1YPos+BOARD_HEIGHT)){
-			ballSpeedY += -1;
-			ballSpeedX += -1;
-			ballSpeedY *= -1;
-			ballSpeedX *= -1;
-		}
-		if((ballX>WIDTH-BOARD_WIDTH-15)&&(ballY>=player2YPos&&ballY<=player2YPos+BOARD_HEIGHT)){
-			ballSpeedY += 1;
-			ballSpeedX += 1;
-			ballSpeedY *= -1;
-			ballSpeedX *= -1;
-		}
+		ifHitsBoard();
 		
 
 		//Display player boards
@@ -135,18 +152,37 @@ public class Pong extends Application{
 	
 	private boolean ifScore(){
 		if(ballX <= 0 ){
-			player2Score++;
+			player2Score+=sum;
+			sum=1;
 			//start = false;
 			resetBall();
 			return true;
 		}
 		else if(ballX>=WIDTH){
-			player1Score++;
+			player1Score+=sum;
+			sum=1;
 			//start = false;
 			resetBall();
 			return true;
 		}
 		return false;
+	}
+	
+	private void ifHitsBoard(){
+		if((ballX < BOARD_WIDTH)&&(ballY>=player1YPos&&ballY<=player1YPos+BOARD_HEIGHT)){
+			ballSpeedY += -1;
+			ballSpeedX += -1;
+			ballSpeedY *= -1;
+			ballSpeedX *= -1;
+			sum++;
+		}
+		else if((ballX>WIDTH-BOARD_WIDTH-15)&&(ballY>=player2YPos&&ballY<=player2YPos+BOARD_HEIGHT)){
+			ballSpeedY += 1;
+			ballSpeedX += 1;
+			ballSpeedY *= -1;
+			ballSpeedX *= -1;
+			sum++;
+		}
 	}
 	
 	private void resetBall(){
