@@ -249,7 +249,7 @@ public class Pong extends Application{
 			turn = false;
 			Random rn = new Random();
 			int rand = rn.nextInt(5) + 1;
-			if(rand == 1)
+			if(rand == 1) 
 				specialLine= true;
 		}
 		else if((ballX>WIDTH-BOARD_WIDTH-15)&&(ballY>=player2YPos&&ballY<=player2YPos+BOARD_HEIGHT)){
