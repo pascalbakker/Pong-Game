@@ -8,6 +8,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
@@ -22,10 +23,11 @@ public class Pong extends Application{
 	private static final int WIDTH = 800;
 	private static final int HEIGHT = 600;
 	private static final int fps = 30;
+	private static boolean pause = false;
 	//Game variables
 	private boolean start = false;
 	private int player1Score = 0;
-	private int player1Special = 2;
+	private int player1Special = 0;
 	private int player2Special = 0;
 	private int player2Score = 0;
 	private int sum = 1;
@@ -34,11 +36,9 @@ public class Pong extends Application{
 	private static final int BOARD_HEIGHT = 100;
 	private static final int BOARD_WIDTH = 15;
 	private static final int WALL_WIDTH = 10;
-	private int wallWidth = 0;
-	private boolean wallIsActive = false;
-	private int wallHits = 0;
-	private int wallX;
-	//Ball variables
+	private static final int WALL_BOTTOM = 120;
+
+	//BALL VARIABLES
 	//Ball speed
 	private int ballSpeedY = -1;
 	private int ballSpeedX = -1;
@@ -46,8 +46,13 @@ public class Pong extends Application{
 	private int ballX = HEIGHT/2;
 	private int ballY = HEIGHT/2;
 	
+	//SPECIAL ABILITY VARIABLES
 	private boolean specialLine = false;
 	private boolean turn = true;
+	private int wallWidth = 0;
+	private boolean wallIsActive = false;
+	private int wallHits = 0;
+	private int wallX;
 	
 	//Player 1 position
 	private double player1XPos = 0;
@@ -55,10 +60,12 @@ public class Pong extends Application{
 	//Player 2 position
 	private double player2XPos = WIDTH-BOARD_WIDTH;
 	private double player2YPos = HEIGHT/2;
+	
+	
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		//Initialize game board
-		Canvas c  = new Canvas(WIDTH,HEIGHT);
+		Canvas c  = new Canvas(WIDTH,HEIGHT-5);
 		GraphicsContext gc = c.getGraphicsContext2D();
 		Timeline t = new Timeline(new KeyFrame(Duration.millis(10),e->run(gc)));
 		t.setCycleCount(Timeline.INDEFINITE);
@@ -74,26 +81,54 @@ public class Pong extends Application{
                     case S: player2YPos +=20; break;
                     case ENTER: start = true; break;
                     case SPACE: special(1); break;
+                    case E: special(0); break;
+                    case P: pause=!pause; break;
+                }
+                if(player1YPos<WALL_WIDTH)
+                	player1YPos=WALL_WIDTH;
+                else if(player1YPos+BOARD_HEIGHT>HEIGHT-WALL_BOTTOM)
+                	player1YPos=HEIGHT-WALL_BOTTOM-BOARD_HEIGHT;
+                if(player2YPos<WALL_WIDTH)
+                	player2YPos=WALL_WIDTH;
+                else if(player2YPos+BOARD_HEIGHT>HEIGHT-WALL_BOTTOM)
+                	player2YPos=HEIGHT-WALL_BOTTOM-BOARD_HEIGHT;
+            }
+        });
+		
+		c.setOnKeyTyped(new EventHandler<KeyEvent>() {
+            public void handle(KeyEvent event) {
+                switch (event.getCode()) {
+                    case UP:    player1YPos-=20; break;
+                    case DOWN:  player1YPos+=20; break;
+                    case W: player2YPos -=20; break;
+                    case S: player2YPos +=20; break;
+                    case ENTER: start = true; break;
+                    case SPACE: special(1); break;
                     case E: special(0);
                 }
                 if(player1YPos<WALL_WIDTH)
                 	player1YPos=WALL_WIDTH;
-                else if(player1YPos+BOARD_HEIGHT>HEIGHT-WALL_WIDTH)
-                	player1YPos=HEIGHT-WALL_WIDTH-BOARD_HEIGHT;
+                else if(player1YPos+BOARD_HEIGHT>HEIGHT-WALL_BOTTOM)
+                	player1YPos=HEIGHT-WALL_BOTTOM-BOARD_HEIGHT;
                 if(player2YPos<WALL_WIDTH)
                 	player2YPos=WALL_WIDTH;
-                else if(player2YPos+BOARD_HEIGHT>HEIGHT-WALL_WIDTH)
-                	player2YPos=HEIGHT-WALL_WIDTH-BOARD_HEIGHT;
+                else if(player2YPos+BOARD_HEIGHT>HEIGHT-WALL_BOTTOM)
+                	player2YPos=HEIGHT-WALL_BOTTOM-BOARD_HEIGHT;
             }
         });
+
+		
 		//Set stage
 		StackPane pane = new StackPane(c);
 		Scene pongScene = new Scene(pane);
 		primaryStage.setScene(pongScene);
+	    primaryStage.setResizable(false);
+
 		primaryStage.show();
 		//Play game
 		t.play();	
 	}
+	
 	
 	private void special(int player){
 		int playerSpecial = player==1 ? player1Special: player2Special;
@@ -150,16 +185,22 @@ public class Pong extends Application{
 	
 	//Every 10 ms, this function will run
 	private void run(GraphicsContext gc) {
-
+		if(pause)
+			return;
+		
 		gc.setFill(Color.WHITE);
-		gc.fillRect(0, 0, WIDTH, HEIGHT);
+		gc.fillRect(0, 0, WIDTH, HEIGHT-5);
 		gc.setFill(Color.BLACK);
-		gc.fillRect(0, WALL_WIDTH, WIDTH, HEIGHT-WALL_WIDTH*2);
+		gc.fillRect(0, WALL_WIDTH, WIDTH, HEIGHT-WALL_BOTTOM-15);
+		
+		///Graphics that do not change
+		Image bottom = new Image("bottom.png");
+		bottom.isPreserveRatio();
+		gc.drawImage(bottom, 0, HEIGHT-WALL_BOTTOM-5);
 
-
-		gc.setFill(Color.WHITE);
+		gc.setFill(Color.BLACK);
 		gc.setFont(Font.font(STYLESHEET_CASPIAN, 25));
-		gc.fillText(player1Score+"|"+player2Score, WIDTH/2, 100);
+		gc.fillText(player1Score+"|"+player2Score, WIDTH/2-8, HEIGHT-50);
 		if(!start){
 			gc.fillText("Pres ENTER TO BEGIN", WIDTH/2, 200);
 			return;
@@ -180,7 +221,7 @@ public class Pong extends Application{
 		hitDetection(gc);
 		if(specialLine){
 			gc.setFill(Color.PURPLE);
-			gc.fillRect(WIDTH/2, WALL_WIDTH, 5, HEIGHT-WALL_WIDTH);
+			gc.fillRect(WIDTH/2, WALL_WIDTH, 5, HEIGHT-131);
 		}
 		if(wallIsActive){
 			gc.setFill(Color.YELLOW);
@@ -192,13 +233,39 @@ public class Pong extends Application{
 		gc.setFill(Color.WHITE);
 		gc.fillRect(player1XPos, player1YPos, BOARD_WIDTH, BOARD_HEIGHT);
 		gc.fillRect(player2XPos, player2YPos, BOARD_WIDTH, BOARD_HEIGHT);
+		
+		
+		//Display player's specials
+		displaySpecials(gc);
 
 	}
 	
+	private Image getSpecialImage(int type){
+		switch(type){
+		case 1: return (new Image("boomerang.png")); 
+		case 2: return (new Image("wall.png"));
+		case 3: return (new Image("speed.png"));
+		}
+		return null;
+		
+	}
+	
+	private void displaySpecials(GraphicsContext gc){
+		//Player 1
+		Image slot = new Image("slot.png");
+		gc.drawImage(slot, 10, HEIGHT-WALL_BOTTOM+5);
+		Image special = getSpecialImage(player1Special);
+		gc.drawImage(special, 10, HEIGHT-WALL_BOTTOM+5);
+		
+		//Player 2
+		gc.drawImage(slot, WIDTH-110, HEIGHT-WALL_BOTTOM+5);
+		special = getSpecialImage(player2Special);
+		gc.drawImage(special, WIDTH-110, HEIGHT-WALL_BOTTOM+5);
+	}
 	
 	private void hitDetection(GraphicsContext gc){
 		//If hits wall
-		if(ballY>=HEIGHT-WALL_WIDTH-15||ballY<=WALL_WIDTH)
+		if(ballY>=HEIGHT-WALL_BOTTOM-15||ballY<=WALL_WIDTH)
 			ballSpeedY *=-1;
 		//If hits board
 		ifHitsBoard(gc);
@@ -207,10 +274,10 @@ public class Pong extends Application{
 	}
 	
 	private void ifHitsSpecialBoard(GraphicsContext gc){
-		if(specialLine&&ballX==WIDTH/2){
+		if(specialLine&&ballX>=WIDTH/2-10&&ballX<=WIDTH/2+10){
 			Random rn = new Random();
 			int rand = rn.nextInt(3) + 1;
-			if(turn)
+			if(!turn)
 				player1Special = rand;
 			else
 				player2Special = rand;
@@ -240,8 +307,10 @@ public class Pong extends Application{
 	
 	private void ifHitsBoard(GraphicsContext gc){
 		if((ballX < BOARD_WIDTH)&&(ballY>=player1YPos&&ballY<=player1YPos+BOARD_HEIGHT)){
-			ballSpeedY += -1;
-			ballSpeedX += -1;
+			if(turn){
+				ballSpeedY += -1;
+				ballSpeedX += -1;
+			}
 			ballSpeedY *= -1;
 			ballSpeedX *= -1;
 			if(turn)
@@ -253,8 +322,10 @@ public class Pong extends Application{
 				specialLine= true;
 		}
 		else if((ballX>WIDTH-BOARD_WIDTH-15)&&(ballY>=player2YPos&&ballY<=player2YPos+BOARD_HEIGHT)){
-			ballSpeedY += 1;
-			ballSpeedX += 1;
+			if(!turn){
+				ballSpeedY += 1;
+				ballSpeedX += 1;
+			}
 			ballSpeedY *= -1;
 			ballSpeedX *= -1;
 			if(!turn)
